@@ -87,12 +87,13 @@
     }
     const meetingDate = makeDate(MEETING_DATE, MEETING_TIME);
 
+    // ✅ Updated with proper projection + geopos
     function initCelestial(viewDate){
       document.getElementById("celestial-map").innerHTML = "";
       Celestial.display({
         container: "celestial-map",
         width: window.innerWidth,
-        projection: "stereo",
+        projection: "stereographic",               // fixed
         datapath: "https://cdn.jsdelivr.net/gh/ofrohn/d3-celestial/data/",
         interactive: true, form: false, controls: true,
         background: { fill: "#030610", stroke: "#0d1624", opacity: 1 },
@@ -104,8 +105,10 @@
         },
         mw: { show: true, style: { fill: "rgba(255,255,255,.06)", opacity: 1 } },
         dsos: { show: true, limit: 6, names: false },
-        location: [LAT, LON],
+
+        geopos: [LAT, LON],                         // fixed (use geopos instead of location)
         date: viewDate,
+
         lines: {
           graticule: { show:false }, equatorial:{show:false}, ecliptic:{show:false}, galactic:{show:false},
           azimuth:{ show:true, stroke:"rgba(255,255,255,.12)", width:1 }
@@ -124,14 +127,16 @@
         btnMeeting.classList.add("active"); btnTonight.classList.remove("active");
         badge.textContent = MEETING_LABEL;
         subtitle.textContent = "Viewing the exact sky we shared 💫";
-        Celestial.date(meetingDate); Celestial.location([LAT, LON]); Celestial.redraw();
+        Celestial.date(meetingDate);               // keep date only
+        Celestial.redraw();
       } else {
         btnTonight.classList.add("active"); btnMeeting.classList.remove("active");
         const now = new Date();
         const nice = now.toLocaleString([], {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
         badge.textContent = "Here & now · " + nice;
         subtitle.textContent = "This is our sky tonight ✨";
-        Celestial.date(now); Celestial.location([LAT, LON]); Celestial.redraw();
+        Celestial.date(now);                       // keep date only
+        Celestial.redraw();
       }
     }
 
