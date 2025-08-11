@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🌌 The Night We Met</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <style>
+    :root { --accent: #ff6aa2; }
+    html, body { margin:0; padding:0; height:100%;
+      background: radial-gradient(1200px 600px at 50% -200px,#0b1a2a,#030610 70%); color:#fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial; }
+    #app{ position:relative; height:100vh; overflow:hidden; }
+    .topbar{ position:absolute; top:12px; left:50%; transform:translateX(-50%);
+      display:flex; gap:10px; align-items:center; z-index:10;
+      background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.08);
+      padding:10px 12px; border-radius:999px; backdrop-filter: blur(8px); box-shadow:0 10px 30px rgba(0,0,0,.2); }
+    .btn{ appearance:none; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#fff;
+      padding:8px 12px; border-radius:999px; cursor:pointer; font-weight:600; }
+    .btn.active{ background:var(--accent); border-color:var(--accent); color:#0b0b12; }
+    .badge{ padding:6px 10px; border-radius:999px; font-size:12px; border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06); }
+    .title{ position:absolute; top:64px; left:50%; transform:translateX(-50%); text-align:center; z-index:9; pointer-events:none; }
+    .title h1{ margin:0; font-size:22px; letter-spacing:.5px; opacity:.95; }
+    .title p{ margin:6px 0 0; font-size:14px; opacity:.8; }
+    #celestial-map{ position:absolute; inset:0; z-index:1; }
+    #start-overlay{ position:fixed; inset:0; z-index:20; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.75); color:#fff; text-align:center; padding:24px; backdrop-filter:blur(6px); }
+    #start-overlay .card{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+      border-radius:16px; padding:18px 20px; max-width:420px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+    #start-overlay .card h3{ margin:0 0 8px; }
+    #start-overlay .card .btn{ margin-top:10px; width:100%; }
+    .foot{ position:absolute; bottom:10px; left:50%; transform:translateX(-50%); font-size:12px; opacity:.6; z-index:5;
+      background:rgba(0,0,0,.3); padding:6px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.1); }
+    @media (max-width:480px){ .topbar{padding:8px 10px;} .btn{padding:7px 10px; font-size:13px;} .title h1{font-size:18px;} .title p{font-size:12px;} }
+  </style>
+  <link href="https://cdn.jsdelivr.net/gh/ofrohn/d3-celestial/celestial.css" rel="stylesheet">
+  <script src="https://d3js.org/d3.v3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/ofrohn/d3-celestial/celestial.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div class="topbar" role="group" aria-label="Sky date toggles">
+      <button id="btn-meeting" class="btn active">🌌 Night we met</button>
+      <button id="btn-tonight" class="btn">✨ Tonight</button>
+      <span id="info-badge" class="badge">Loading sky…</span>
+    </div>
+
+    <div class="title">
+      <h1>The Night The Stars Aligned For Us</h1>
+      <p id="subtitle">Viewing the exact sky we shared 💫</p>
+    </div>
+
+    <div id="celestial-map"></div>
+
+    <!-- Optional audio: set display:flex above and add a source here if you include music -->
+    <div id="start-overlay">
+      <div class="card">
+        <h3>Tap to begin 💖</h3>
+        <p>Turn up your volume and let the stars play our song.</p>
+        <button class="btn" id="start-btn">Start</button>
+      </div>
+    </div>
+    <audio id="bgm" loop playsinline preload="auto">
+      <!-- <source src="song.m4a" type="audio/mp4"> -->
+    </audio>
+
+    <div class="foot">Pinch to zoom • drag to pan • rotate with two fingers</div>
+  </div>
+
+  <script>
+    /*************** PERSONALIZE THESE ***************/
+    // 👉 Set your real meeting date/time:
+    const MEETING_DATE = "2025-07-09"; // YYYY-MM-DD
+    const MEETING_TIME = "22:30";      // HH:mm (24h)
+
+    // Rua da Ponta da Cruz 66 (Doca do Cavacas), Funchal, Madeira:
+    const LAT = 32.63548;
+    const LON = -16.94782;
+
+    const MEETING_LABEL = "Rua da Ponta da Cruz 66 · Funchal · " + MEETING_DATE + " · " + MEETING_TIME;
+    /************************************************/
+
+    function makeDate(dateStr, timeStr){
+      const [y,m,d] = dateStr.split("-").map(Number);
+      const [hh,mm] = timeStr.split(":").map(Number);
+      return new Date(y, (m-1), d, hh, mm, 0);
+    }
+    const meetingDate = makeDate(MEETING_DATE, MEETING_TIME);
+
+    function initCelestial(viewDate){
+      document.getElementById("celestial-map").innerHTML = "";
+      Celestial.display({
+        container: "celestial-map",
+        width: window.innerWidth,
+        projection: "stereo",
+        datapath: "https://cdn.jsdelivr.net/gh/ofrohn/d3-celestial/data/",
+        interactive: true, form: false, controls: true,
+        background: { fill: "#030610", stroke: "#0d1624", opacity: 1 },
+        stars: { show: true, limit: 6, colors: true, style: { fill: "#fff", opacity: 1 }, size: 3, exponent: -0.28, names: true, proper: true },
+        constellations: {
+          show: true, names: true, lines: true, bounds: false,
+          nameStyle: { fill: "rgba(255,255,255,.75)", font: "12px sans-serif" },
+          lineStyle: { stroke: "rgba(255,255,255,.25)", width: 1, opacity: .6 }
+        },
+        mw: { show: true, style: { fill: "rgba(255,255,255,.06)", opacity: 1 } },
+        dsos: { show: true, limit: 6, names: false },
+        location: [LAT, LON],
+        date: viewDate,
+        lines: {
+          graticule: { show:false }, equatorial:{show:false}, ecliptic:{show:false}, galactic:{show:false},
+          azimuth:{ show:true, stroke:"rgba(255,255,255,.12)", width:1 }
+        },
+        planets: { show: true, which: ["mer","ven","ter","mar","jup","sat"], names: true }
+      });
+    }
+
+    const btnMeeting = document.getElementById("btn-meeting");
+    const btnTonight = document.getElementById("btn-tonight");
+    const badge = document.getElementById("info-badge");
+    const subtitle = document.getElementById("subtitle");
+
+    function setActive(which){
+      if (which === "meeting"){
+        btnMeeting.classList.add("active"); btnTonight.classList.remove("active");
+        badge.textContent = MEETING_LABEL;
+        subtitle.textContent = "Viewing the exact sky we shared 💫";
+        Celestial.date(meetingDate); Celestial.location([LAT, LON]); Celestial.redraw();
+      } else {
+        btnTonight.classList.add("active"); btnMeeting.classList.remove("active");
+        const now = new Date();
+        const nice = now.toLocaleString([], {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+        badge.textContent = "Here & now · " + nice;
+        subtitle.textContent = "This is our sky tonight ✨";
+        Celestial.date(now); Celestial.location([LAT, LON]); Celestial.redraw();
+      }
+    }
+
+    initCelestial(meetingDate);
+    badge.textContent = MEETING_LABEL;
+
+    btnMeeting.addEventListener("click", () => setActive("meeting"));
+    btnTonight.addEventListener("click", () => setActive("tonight"));
+
+    window.addEventListener("resize", () => { Celestial.resize({ width: window.innerWidth }); Celestial.redraw(); });
+
+    // Optional audio unlock overlay (enable if you add music)
+    (function(){
+      const overlay = document.getElementById('start-overlay');
+      const startBtn = document.getElementById('start-btn');
+      const audio = document.getElementById('bgm');
+      if (!startBtn) return;
+      function enableAudio(){ audio.play().then(() => overlay.style.display='none'); }
+      startBtn?.addEventListener('click', enableAudio);
+      overlay?.addEventListener('click', enableAudio);
+    })();
+  </script>
+</body>
+</html>
