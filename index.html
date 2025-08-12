@@ -33,10 +33,8 @@
     .title h1{ margin:0; font-size:22px; letter-spacing:.5px; opacity:.95; }
     .title p{ margin:6px 0 0; font-size:14px; opacity:.8; }
     #celestial-map{ position:absolute; inset:0; z-index:1; }
-    /* make sure the map fills the viewport */
     #celestial-map svg, #celestial-map canvas { width:100% !important; height:100% !important; display:block; }
 
-    /* optional audio overlay (hidden by default) */
     #start-overlay{ position:fixed; inset:0; z-index:20; display:none;
       align-items:center; justify-content:center; background:rgba(0,0,0,.75);
       color:#fff; text-align:center; padding:24px; backdrop-filter:blur(6px);
@@ -56,7 +54,6 @@
     }
   </style>
 
-  <!-- d3-celestial -->
   <link href="https://cdn.jsdelivr.net/gh/ofrohn/d3-celestial/celestial.css" rel="stylesheet">
   <script src="https://d3js.org/d3.v3.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/ofrohn/d3-celestial/celestial.min.js"></script>
@@ -76,7 +73,7 @@
 
     <div id="celestial-map"></div>
 
-    <!-- Optional audio: set display:flex above and add a source here if you include music -->
+    <!-- Optional audio overlay -->
     <div id="start-overlay">
       <div class="card">
         <h3>Tap to begin 💖</h3>
@@ -95,9 +92,7 @@
     /*************** PERSONALIZE THESE ***************/
     const MEETING_DATE = "2025-07-09"; // YYYY-MM-DD
     const MEETING_TIME = "22:30";      // HH:mm (24h)
-
-    // Rua da Ponta da Cruz 66 (Doca do Cavacas), Funchal, Madeira:
-    const LAT = 32.63548;
+    const LAT = 32.63548;              // Rua da Ponta da Cruz 66, Funchal
     const LON = -16.94782;
 
     const MEETING_LABEL = "Rua da Ponta da Cruz 66 · Funchal · " + MEETING_DATE + " · " + MEETING_TIME;
@@ -110,53 +105,26 @@
     }
     const meetingDate = makeDate(MEETING_DATE, MEETING_TIME);
 
-    // ---- pick a working data CDN (some ad/content blockers break one or the other) ----
-    async function pickDataPath() {
-      const candidates = [
-        "https://ofrohn.github.io/d3-celestial/data/",
-        "https://cdn.jsdelivr.net/gh/ofrohn/d3-celestial@master/data/",
-        "https://cdn.jsdelivr.net/gh/ofrohn/d3-celestial/data/"
-      ];
-      for (const base of candidates) {
-        try {
-          const res = await fetch(base + "stars.6.json", { mode: "cors", cache: "no-store" });
-          if (res.ok) return base;
-        } catch (_) {}
-      }
-      return null;
-    }
-
-    let DATA_PATH = null;
-
-    async function initCelestial(viewDate) {
-      if (!DATA_PATH) {
-        DATA_PATH = await pickDataPath();
-        if (!DATA_PATH) {
-          alert("Star data could not be loaded (possibly a content blocker). Try disabling blockers for this page and reload.");
-          return;
-        }
-      }
-      const container = document.getElementById("celestial-map");
-      container.innerHTML = "";
+    function initCelestial(viewDate) {
+      document.getElementById("celestial-map").innerHTML = "";
 
       Celestial.display({
         container: "celestial-map",
         width: window.innerWidth,
-
         projection: "stereographic",
         transform: "equatorial",
-        datapath: DATA_PATH,       // ← picked dynamically
+
+        // 👇 use your own repo’s data folder
+        datapath: "./data/",
 
         interactive: true,
         form: false,
         controls: true,
 
         background: { fill: "#030610", stroke: "#0d1624", opacity: 1 },
-        stars: {
-          show: true, limit: 6, colors: true,
-          style: { fill: "#fff", opacity: 1 },
-          size: 3, exponent: -0.28, names: true, proper: true
-        },
+        stars: { show: true, limit: 6, colors: true,
+                 style: { fill: "#fff", opacity: 1 },
+                 size: 3, exponent: -0.28, names: true, proper: true },
         constellations: {
           show: true, names: true, lines: true, bounds: false,
           nameStyle: { fill: "rgba(255,255,255,.75)", font: "12px sans-serif" },
@@ -203,11 +171,8 @@
       }
     }
 
-    // init
-    (async () => {
-      await initCelestial(meetingDate);
-      badge.textContent = MEETING_LABEL;
-    })();
+    initCelestial(meetingDate);
+    badge.textContent = MEETING_LABEL;
 
     btnMeeting.addEventListener("click", () => setActive("meeting"));
     btnTonight.addEventListener("click", () => setActive("tonight"));
